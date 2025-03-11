@@ -25,9 +25,13 @@ def process_data(df, teacher, subject, course, level, language):
     columns_to_remove = {"ID de usuario único", "ID de usuario unico"}
 
     for i, col in enumerate(df.columns):
+        # Skip columns that are in the removal set.
         if col in columns_to_remove:
             continue
-        # Check if the column header contains "Grading Category:"
+        # Exclude columns that have "(Count in Grade)" or "Category Score" in the header.
+        if "(Count in Grade)" in col or "Category Score" in col:
+            continue
+        # Check if the column header contains "Grading Category:".
         if "Grading Category:" in col:
             # Extract the category text using a regex.
             m = re.search(r'Grading Category:\s*([^,)]+)', col)
@@ -35,7 +39,7 @@ def process_data(df, teacher, subject, course, level, language):
                 category = m.group(1).strip()
             else:
                 category = "Unknown"
-            # Remove the parenthesized part and create a cleaner name.
+            # Remove the parenthesized part (if any) and create a cleaner name.
             base_name = col.split('(')[0].strip()
             new_name = f"{base_name} {category}".strip()
             columns_info.append({
@@ -48,7 +52,6 @@ def process_data(df, teacher, subject, course, level, language):
             general_columns.append(col)
     
     # Reorder general columns so that columns containing names appear first.
-    # For Spanish use "nombre" or "apellido"; for English, try "name", "first", or "last".
     if language == "Español":
         name_terms = ["nombre", "apellido"]
     else:
@@ -91,6 +94,9 @@ def process_data(df, teacher, subject, course, level, language):
     final_order = general_columns_reordered + final_coded_order
     df_final = df_cleaned[final_order]
 
+    # Replace any cell with the value "Missing" with an empty string.
+    df_final.replace("Missing", "", inplace=True)
+
     # Export to Excel with a header section for teacher info using language-specific labels.
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -111,84 +117,4 @@ def process_data(df, teacher, subject, course, level, language):
             level_label = "Nivel:"
         else:
             teacher_label = "Teacher:"
-            subject_label = "Subject:"
-            course_label = "Class:"
-            level_label = "Level:"
-
-        worksheet.write('A1', teacher_label, border_format)
-        worksheet.write('B1', teacher, border_format)
-        worksheet.write('A2', subject_label, border_format)
-        worksheet.write('B2', subject, border_format)
-        worksheet.write('A3', course_label, border_format)
-        worksheet.write('B3', course, border_format)
-        worksheet.write('A4', level_label, border_format)
-        worksheet.write('B4', level, border_format)
-        timestamp = datetime.now().strftime("%y-%m-%d")
-        worksheet.write('A5', timestamp, border_format)
-
-        # Write the header row for the data.
-        for col_num, value in enumerate(df_final.columns):
-            worksheet.write(6, col_num, value, header_format)
-
-        # Adjust column widths.
-        for idx, col_name in enumerate(df_final.columns):
-            if any(term in col_name.lower() for term in name_terms):
-                worksheet.set_column(idx, idx, 25)
-            elif (language == "Español" and col_name.startswith("Promedio")) or (language == "English" and col_name.startswith("Average")):
-                worksheet.set_column(idx, idx, 7)
-            else:
-                worksheet.set_column(idx, idx, 5)
-
-        num_rows = df_final.shape[0]
-        num_cols = df_final.shape[1]
-        data_start_row = 6
-        data_end_row = 6 + num_rows
-        worksheet.conditional_format(data_start_row, 0, data_end_row, num_cols - 1, {
-            'type': 'formula',
-            'criteria': '=TRUE',
-            'format': border_format
-        })
-    output.seek(0)
-    return output
-
-def main():
-    st.title("Griffin's CSV to Excel")
-    language = st.selectbox("Select language / Seleccione idioma", ["English", "Español"])
-
-    # Display input fields with language-specific labels.
-    if language == "Español":
-        teacher = st.text_input("Escriba el nombre del docente:")
-        subject = st.text_input("Escriba el área:")
-        course = st.text_input("Escriba el curso:")
-        level = st.text_input("Escriba el nivel:")
-        uploaded_file = st.file_uploader("Subir archivo CSV", type=["csv"])
-    else:
-        teacher = st.text_input("Enter teacher's name:")
-        subject = st.text_input("Enter subject area:")
-        course = st.text_input("Enter class:")
-        level = st.text_input("Enter level:")
-        uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
-
-    if uploaded_file is not None:
-        try:
-            df = pd.read_csv(uploaded_file)
-            output_excel = process_data(df, teacher, subject, course, level, language)
-            if language == "Español":
-                download_label = "Descargar Gradebook organizado (Excel)"
-                success_msg = "Procesamiento completado!"
-            else:
-                download_label = "Download Organized Gradebook (Excel)"
-                success_msg = "Processing completed!"
-            st.download_button(
-                label=download_label,
-                data=output_excel,
-                file_name="final_cleaned_gradebook.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            st.success(success_msg)
-        except Exception as e:
-            error_msg = f"Ha ocurrido un error: {e}" if language == "Español" else f"An error occurred: {e}"
-            st.error(error_msg)
-
-if __name__ == "__main__":
-    main()
+        
