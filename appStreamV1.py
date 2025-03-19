@@ -239,7 +239,7 @@ def process_data(df, teacher, subject, course, level, language):
     return output
 
 def main():
-    st.title("Griffin's CSV to Excel")
+    st.title("Griffin CSV to Excel")
     language = st.selectbox("Select language / Seleccione idioma", ["English", "Español"])
 
     # Display input fields with language-specific labels.
