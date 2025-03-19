@@ -6,7 +6,7 @@ import xlsxwriter
 from datetime import datetime
 
 def process_data(df, teacher, subject, course, level, language):
-    # Drop unwanted columns if present (if they exist in the CSV)
+    # Updated list of columns to drop from the CSV (if present)
     columns_to_drop = [
         "Nombre de usuario",
         "Promedio General",
@@ -15,7 +15,13 @@ def process_data(df, teacher, subject, course, level, language):
         "Term1 - 2024 - TO BE_SER - Puntuación de categoría",
         "Term1 - 2024 - TO DECIDE_DECIDIR - Puntuación de categoría",
         "Term1 - 2024 - TO DO_HACER - Puntuación de categoría",
-        "Term1 - 2024 - TO KNOW_SABER - Puntuación de categoría"
+        "Term1 - 2024 - TO KNOW_SABER - Puntuación de categoría",
+        "Unique User ID",
+        "Overall",
+        "2025",
+        "Term1 - 2025",
+        "Term2 - 2025",
+        "Term3 - 2025"
     ]
     df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
     
