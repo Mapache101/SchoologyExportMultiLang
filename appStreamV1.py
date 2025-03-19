@@ -104,6 +104,33 @@ def process_data(df, teacher, subject, course, level, language):
     final_order = general_columns_reordered + final_coded_order
     df_final = df_cleaned[final_order]
 
+    # Add final grade calculation
+    weights = {
+        "Auto eval": 0.05,
+        "TO BE_SER": 0.05,
+        "TO DECIDE_DECIDIR": 0.05,
+        "TO DO_HACER": 0.40,
+        "TO KNOW_SABER": 0.45
+    }
+    
+    final_grade = pd.Series(0.0, index=df_final.index)
+    missing_categories = []
+    final_grade_col = "Calificación Final" if language == "Español" else "Final Grade"
+
+    for category, weight in weights.items():
+        avg_col = f"Promedio {category}" if language == "Español" else f"Average {category}"
+        if avg_col in df_final.columns:
+            final_grade += df_final[avg_col] * weight
+        else:
+            missing_categories.append(category)
+    
+    if missing_categories:
+        error_msg = (f"Faltan categorías requeridas: {', '.join(missing_categories)}" if language == "Español" 
+                    else f"Missing required categories: {', '.join(missing_categories)}")
+        raise ValueError(error_msg)
+
+    df_final[final_grade_col] = final_grade.round(2)
+
     # Replace any occurrence of "Missing" with an empty cell.
     df_final.replace("Missing", "", inplace=True)
 
@@ -141,6 +168,10 @@ def process_data(df, teacher, subject, course, level, language):
             'border': 1,
             'bg_color': '#ADD8E6'
         })
+        final_grade_format = workbook.add_format({
+            'border': 1,
+            'bg_color': '#90EE90'  # Light green
+        })
         border_format = workbook.add_format({'border': 1})
 
         # Set header labels based on language.
@@ -170,25 +201,35 @@ def process_data(df, teacher, subject, course, level, language):
         for col_num, value in enumerate(df_final.columns):
             if value.startswith(("Promedio ", "Average ")):  # Space important to avoid false matches
                 worksheet.write(6, col_num, value, avg_header_format)
+            elif value == final_grade_col:
+                worksheet.write(6, col_num, value, final_grade_format)
             else:
                 worksheet.write(6, col_num, value, header_format)
 
-        # Apply light blue background to average data cells
+        # Apply formatting to data cells
         average_columns = [col for col in df_final.columns 
                          if col.startswith(("Promedio ", "Average "))]  # Space important
         
-        for col_name in average_columns:
+        for col_name in df_final.columns:
             col_idx = df_final.columns.get_loc(col_name)
             for row_idx in range(7, 7 + len(df_final)):
                 value = df_final_filled.iloc[row_idx-7, col_idx]
-                worksheet.write(row_idx, col_idx, value, avg_data_format)
+                if col_name in average_columns:
+                    worksheet.write(row_idx, col_idx, value, avg_data_format)
+                elif col_name == final_grade_col:
+                    worksheet.write(row_idx, col_idx, value, final_grade_format)
+                else:
+                    worksheet.write(row_idx, col_idx, value, border_format)
 
         # Adjust column widths.
+        final_grade_col_name = "Calificación Final" if language == "Español" else "Final Grade"
         for idx, col_name in enumerate(df_final.columns):
             if any(term in col_name.lower() for term in name_terms):
                 worksheet.set_column(idx, idx, 25)
             elif (language == "Español" and col_name.startswith("Promedio")) or (language == "English" and col_name.startswith("Average")):
                 worksheet.set_column(idx, idx, 7)
+            elif col_name == final_grade_col_name:
+                worksheet.set_column(idx, idx, 12)  # Wider column for final grade
             else:
                 worksheet.set_column(idx, idx, 5)
 
