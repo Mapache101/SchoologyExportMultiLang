@@ -114,20 +114,12 @@ def process_data(df, teacher, subject, course, level, language):
     }
     
     final_grade = pd.Series(0.0, index=df_final.index)
-    missing_categories = []
     final_grade_col = "Calificación Final" if language == "Español" else "Final Grade"
 
     for category, weight in weights.items():
         avg_col = f"Promedio {category}" if language == "Español" else f"Average {category}"
         if avg_col in df_final.columns:
             final_grade += df_final[avg_col] * weight
-        else:
-            missing_categories.append(category)
-    
-    if missing_categories:
-        error_msg = (f"Faltan categorías requeridas: {', '.join(missing_categories)}" if language == "Español" 
-                    else f"Missing required categories: {', '.join(missing_categories)}")
-        raise ValueError(error_msg)
 
     df_final[final_grade_col] = final_grade.round(2)
 
