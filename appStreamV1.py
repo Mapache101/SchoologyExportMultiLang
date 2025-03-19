@@ -116,7 +116,6 @@ def process_data(df, teacher, subject, course, level, language):
 
         header_format = workbook.add_format({'bold': True, 'border': 1, 'rotation': 90, 'shrink': True})
         border_format = workbook.add_format({'border': 1})
-        light_blue_format = workbook.add_format({'bg_color': '#ADD8E6', 'border': 1})
 
         # Set header labels based on language.
         if language == "Español":
@@ -145,14 +144,14 @@ def process_data(df, teacher, subject, course, level, language):
         for col_num, value in enumerate(df_final.columns):
             worksheet.write(6, col_num, value, header_format)
 
-        # Apply the light blue background color for columns used in average calculations.
-        for col_num, col_name in enumerate(df_final.columns):
-            # Check if this column is an average column
-            if col_name.startswith("Promedio") or col_name.startswith("Average"):
-                worksheet.set_column(col_num, col_num, 7, light_blue_format)  # Set background color
-                worksheet.write(6, col_num, col_name, light_blue_format)  # Apply to header as well
+        # Adjust column widths.
+        for idx, col_name in enumerate(df_final.columns):
+            if any(term in col_name.lower() for term in name_terms):
+                worksheet.set_column(idx, idx, 25)
+            elif (language == "Español" and col_name.startswith("Promedio")) or (language == "English" and col_name.startswith("Average")):
+                worksheet.set_column(idx, idx, 7)
             else:
-                worksheet.set_column(col_num, col_num, 5)
+                worksheet.set_column(idx, idx, 5)
 
         num_rows = df_final.shape[0]
         num_cols = df_final.shape[1]
@@ -163,7 +162,6 @@ def process_data(df, teacher, subject, course, level, language):
             'criteria': '=TRUE',
             'format': border_format
         })
-
     output.seek(0)
     return output
 
@@ -203,4 +201,8 @@ def main():
             )
             st.success(success_msg)
         except Exception as e:
-            st.error(f"Error processing the file: {e}")
+            error_msg = f"Ha ocurrido un error: {e}" if language == "Español" else f"An error occurred: {e}"
+            st.error(error_msg)
+
+if __name__ == "__main__":
+    main()
