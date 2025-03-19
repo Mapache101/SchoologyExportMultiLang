@@ -95,7 +95,8 @@ def process_data(df, teacher, subject, course, level, language):
         avg_col_name = f"Promedio {cat}" if language == "Español" else f"Average {cat}"
         # Convert the group columns to numeric (coercing errors) and compute the row-wise mean.
         numeric_group = df_cleaned[group_names].apply(lambda x: pd.to_numeric(x, errors='coerce'))
-        df_cleaned[avg_col_name] = numeric_group.mean(axis=1)
+        # Round the average to whole numbers
+        df_cleaned[avg_col_name] = numeric_group.mean(axis=1).round(0)
         # Append group columns and then the average column.
         final_coded_order.extend(group_names)
         final_coded_order.append(avg_col_name)
